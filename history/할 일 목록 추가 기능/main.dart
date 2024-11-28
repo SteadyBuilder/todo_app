@@ -38,13 +38,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
     print(_todoList);
   }
 
-  void _deleteTodoItem(index) {
-    setState(() {
-      _todoList.removeAt(index);
-    });
-    print("삭제된 항목의 인덱스: $index");
-  }
-
   // 다이얼로그를 표시한 메서드
   void _showAddTodoDialog(BuildContext context) {
     String newTask = "";
@@ -102,12 +95,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(_todoList[index]),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent),
-                    onPressed: () {
-                      _deleteTodoItem(index); // 삭제 버튼 클릭 시 항목 삭제
-                    },
-                  ),
                 );
               },
             ),
