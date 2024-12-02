@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,18 +32,48 @@ class TodoListScreen extends StatefulWidget {
 class _TodoListScreenState extends State<TodoListScreen> {
   final List<String> _todoList = []; // 할 일 목록
 
+  // 상태값 초기화 (깔끔한 데이터 로드를 위함)
+  @override
+  void initState() {
+    super.initState();
+    _loadTodoList(); // 앱 시작 시 로컬 저장소에서 데이터 로드
+  }
+
+  // 로컬 저장소에서 데이터를 불러오는 메서드
+  Future<void> _loadTodoList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String>? loadedList = prefs.getStringList('todoList');
+    if (loadedList != null) {
+      setState(() {
+        _todoList.addAll(loadedList);
+      });
+    }
+  }
+
+  // 로컬 저장소에 데이터를 저장하는 메서드
+  Future<void> _saveTodoList() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('todoList', _todoList);
+  }
+
+  // 할 일 추가 메서드
   void _addTodoItem(task) {
     setState(() {
       _todoList.add(task);
     });
-    print(_todoList);
+    print(_todoList.last);
+    print("할 일을 추가했어요 !");
+    _saveTodoList();
   }
 
+  // 할 일 삭제 메서드
   void _deleteTodoItem(index) {
+    print(_todoList[index]);
     setState(() {
       _todoList.removeAt(index);
     });
-    print("삭제된 항목의 인덱스: $index");
+    print("할 일을 삭제했어요 !");
+    _saveTodoList();
   }
 
   // 다이얼로그를 표시한 메서드
@@ -75,7 +106,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 if (newTask.isNotEmpty) {
                   // 할 일 리스트 추가하기
                   _addTodoItem(newTask);
-                  print("할 일을 추가했어요!");
                 }
                 Navigator.of(context).pop(); // 다이얼로그 닫기
               },
