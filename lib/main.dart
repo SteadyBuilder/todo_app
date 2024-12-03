@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -30,22 +31,38 @@ class TodoListScreen extends StatefulWidget {
 
 // build() {}
 class _TodoListScreenState extends State<TodoListScreen> {
-  final List<String> _todoList = []; // 할 일 목록
+  //final List<String> _todoList = []; // 할 일 목록
+  final List<Map<String, dynamic>> _todoList = []; // 수정: 완료/미완료 상태 포함
 
   // 상태값 초기화 (깔끔한 데이터 로드를 위함)
   @override
   void initState() {
     super.initState();
+    // _clearOldData(); // 초기화 메서드 호출
     _loadTodoList(); // 앱 시작 시 로컬 저장소에서 데이터 로드
+  }
+
+  // 저장된 데이터 초기화
+  Future<void> _clearOldData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('todoList'); // SharedPreferences 데이터 삭제
+    setState(
+      () {
+        _todoList.clear(); // _todoList 상태 초기화
+      },
+    );
+    print("기존 데이터를 삭제했어요!");
+    print(_todoList);
   }
 
   // 로컬 저장소에서 데이터를 불러오는 메서드
   Future<void> _loadTodoList() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String>? loadedList = prefs.getStringList('todoList');
-    if (loadedList != null) {
+    final jsonString = prefs.getString('todoList');
+    if (jsonString != null) {
       setState(() {
-        _todoList.addAll(loadedList);
+        final List<dynamic> jsonData = jsonDecode(jsonString);
+        _todoList.addAll(jsonData.cast<Map<String, dynamic>>());
       });
     }
   }
@@ -53,13 +70,14 @@ class _TodoListScreenState extends State<TodoListScreen> {
   // 로컬 저장소에 데이터를 저장하는 메서드
   Future<void> _saveTodoList() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('todoList', _todoList);
+    final jsonString = jsonEncode(_todoList); // JSON 문자열로 변환
+    await prefs.setString('todoList', jsonString); // JSON 데이터 저장
   }
 
   // 할 일 추가 메서드
   void _addTodoItem(task) {
     setState(() {
-      _todoList.add(task);
+      _todoList.add({'task': task, 'isCompleted': false}); // 수정: 완료 상태 포함
     });
     print(_todoList.last);
     print("할 일을 추가했어요 !");
@@ -73,6 +91,14 @@ class _TodoListScreenState extends State<TodoListScreen> {
       _todoList.removeAt(index);
     });
     print("할 일을 삭제했어요 !");
+    _saveTodoList();
+  }
+
+  // 완료 상태 변경 메서드
+  void _toggleTodoStatus(int index) {
+    setState(() {
+      _todoList[index]['isCompleted'] = !_todoList[index]['isCompleted'];
+    });
     _saveTodoList();
   }
 
@@ -130,8 +156,24 @@ class _TodoListScreenState extends State<TodoListScreen> {
           : ListView.builder(
               itemCount: _todoList.length,
               itemBuilder: (context, index) {
+                final todoItem = _todoList[index];
                 return ListTile(
-                  title: Text(_todoList[index]),
+                  title: Text(
+                    todoItem['task'],
+                    style: TextStyle(
+                      decoration: todoItem['isCompleted']
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      color:
+                          todoItem['isCompleted'] ? Colors.grey : Colors.black,
+                    ),
+                  ),
+                  leading: Checkbox(
+                    value: todoItem['isCompleted'],
+                    onChanged: (value) {
+                      _toggleTodoStatus(index); // 완료 상태 변경
+                    },
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.redAccent),
                     onPressed: () {
