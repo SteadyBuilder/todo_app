@@ -29,10 +29,10 @@ class TodoListScreen extends StatefulWidget {
   _TodoListScreenState createState() => _TodoListScreenState();
 }
 
-// build() {}
 class _TodoListScreenState extends State<TodoListScreen> {
   //final List<String> _todoList = []; // 할 일 목록
-  final List<Map<String, dynamic>> _todoList = []; // 수정: 완료/미완료 상태 포함
+  final List<Map<String, dynamic>> _todoList = []; // 완료/미완료 상태 포함
+  String _filter = 'all'; // 필터 상태: 'all', 'active', 'completed'
 
   // 상태값 초기화 (깔끔한 데이터 로드를 위함)
   @override
@@ -102,6 +102,16 @@ class _TodoListScreenState extends State<TodoListScreen> {
     _saveTodoList();
   }
 
+  // 현재 필터에 따라 리스트 필터링
+  List<Map<String, dynamic>> _getFilteredTodos() {
+    if (_filter == 'active') {
+      return _todoList.where((item) => !item['isCompleted']).toList();
+    } else if (_filter == 'completed') {
+      return _todoList.where((item) => item['isCompleted']).toList();
+    }
+    return _todoList; // 'all'
+  }
+
   // 다이얼로그를 표시한 메서드
   void _showAddTodoDialog(BuildContext context) {
     String newTask = "";
@@ -145,18 +155,37 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredTodos = _getFilteredTodos();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('To-Do List'),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              setState(() {
+                _filter = value;
+                if (value == 'test') print(_todoList[0]);
+              });
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'all', child: Text('전체 보기')),
+              const PopupMenuItem(value: 'active', child: Text('미완료 보기')),
+              const PopupMenuItem(value: 'completed', child: Text('완료 보기')),
+              const PopupMenuItem(value: 'test', child: Text('테스트 프린트')),
+            ],
+          ),
+        ],
       ),
-      body: _todoList.isEmpty
+      body: filteredTodos.isEmpty
           ? const Center(
               child: Text('할 일이 없습니다!'),
             )
           : ListView.builder(
-              itemCount: _todoList.length,
+              itemCount: filteredTodos.length,
               itemBuilder: (context, index) {
-                final todoItem = _todoList[index];
+                final todoItem = filteredTodos[index];
+                final actualIndex = _todoList.indexOf(todoItem);
                 return ListTile(
                   title: Text(
                     todoItem['task'],
@@ -171,13 +200,13 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   leading: Checkbox(
                     value: todoItem['isCompleted'],
                     onChanged: (value) {
-                      _toggleTodoStatus(index); // 완료 상태 변경
+                      _toggleTodoStatus(actualIndex); // 완료 상태 변경
                     },
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.redAccent),
                     onPressed: () {
-                      _deleteTodoItem(index); // 삭제 버튼 클릭 시 항목 삭제
+                      _deleteTodoItem(actualIndex); // 삭제 버튼 클릭 시 항목 삭제
                     },
                   ),
                 );
