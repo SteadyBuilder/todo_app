@@ -38,21 +38,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   @override
   void initState() {
     super.initState();
-    // _clearOldData(); // 초기화 메서드 호출
     _loadTodoList(); // 앱 시작 시 로컬 저장소에서 데이터 로드
-  }
-
-  // 저장된 데이터 초기화
-  Future<void> _clearOldData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('todoList'); // SharedPreferences 데이터 삭제
-    setState(
-      () {
-        _todoList.clear(); // _todoList 상태 초기화
-      },
-    );
-    print("기존 데이터를 삭제했어요!");
-    print(_todoList);
   }
 
   // 로컬 저장소에서 데이터를 불러오는 메서드
@@ -75,9 +61,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
   }
 
   // 할 일 추가 메서드
-  void _addTodoItem(task) {
+  void _addTodoItem(String task) {
     setState(() {
-      _todoList.add({'task': task, 'isCompleted': false}); // 수정: 완료 상태 포함
+      _todoList.add({'task': task, 'isCompleted': false}); // 완료 상태 포함
     });
     print(_todoList.last);
     print("할 일을 추가했어요 !");
@@ -85,12 +71,20 @@ class _TodoListScreenState extends State<TodoListScreen> {
   }
 
   // 할 일 삭제 메서드
-  void _deleteTodoItem(index) {
+  void _deleteTodoItem(int index) {
     print(_todoList[index]);
     setState(() {
       _todoList.removeAt(index);
     });
     print("할 일을 삭제했어요 !");
+    _saveTodoList();
+  }
+
+  // 할 일 수정 메서드
+  void _editTodoItem(int index, String newTask) {
+    setState(() {
+      _todoList[index]['task'] = newTask;
+    });
     _saveTodoList();
   }
 
@@ -112,7 +106,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return _todoList; // 'all'
   }
 
-  // 다이얼로그를 표시한 메서드
+  // 할 일 추가 다이얼로그 표시
   void _showAddTodoDialog(BuildContext context) {
     String newTask = "";
 
@@ -151,7 +145,47 @@ class _TodoListScreenState extends State<TodoListScreen> {
         );
       },
     );
-  } // __showSimpleDialog
+  } // _showAddTodoDialog
+
+  void _showEditTodoDialog(BuildContext context, int index) {
+    String editedTask = _todoList[index]['task'];
+    TextEditingController controller = TextEditingController(text: editedTask);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("할 일 수정"),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: "할 일을 수정하세요",
+            ),
+            onChanged: (value) {
+              editedTask = value;
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("취소"),
+            ),
+            TextButton(
+              onPressed: () {
+                if (editedTask.isNotEmpty) {
+                  _editTodoItem(index, editedTask);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text("저장"),
+            ),
+          ],
+        );
+      },
+    );
+  } // _showEditTodoDialog
 
   @override
   Widget build(BuildContext context) {
@@ -165,21 +199,19 @@ class _TodoListScreenState extends State<TodoListScreen> {
             onSelected: (value) {
               setState(() {
                 _filter = value;
-                if (value == 'test') print(_todoList[0]);
               });
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'all', child: Text('전체 보기')),
               const PopupMenuItem(value: 'active', child: Text('미완료 보기')),
               const PopupMenuItem(value: 'completed', child: Text('완료 보기')),
-              const PopupMenuItem(value: 'test', child: Text('테스트 프린트')),
             ],
           ),
         ],
       ),
       body: filteredTodos.isEmpty
           ? const Center(
-              child: Text('할 일이 없습니다!'),
+              child: Text('항목이 없습니다!'),
             )
           : ListView.builder(
               itemCount: filteredTodos.length,
@@ -203,11 +235,22 @@ class _TodoListScreenState extends State<TodoListScreen> {
                       _toggleTodoStatus(actualIndex); // 완료 상태 변경
                     },
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.redAccent),
-                    onPressed: () {
-                      _deleteTodoItem(actualIndex); // 삭제 버튼 클릭 시 항목 삭제
-                    },
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blueAccent),
+                        onPressed: () {
+                          _showEditTodoDialog(context, actualIndex);
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                        onPressed: () {
+                          _deleteTodoItem(actualIndex); // 삭제 버튼 클릭 시 항목 삭제
+                        },
+                      ),
+                    ],
                   ),
                 );
               },
