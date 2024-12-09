@@ -30,15 +30,16 @@ class TodoListScreen extends StatefulWidget {
 }
 
 class _TodoListScreenState extends State<TodoListScreen> {
-  //final List<String> _todoList = []; // 할 일 목록
   final List<Map<String, dynamic>> _todoList = []; // 완료/미완료 상태 포함
   String _filter = 'all'; // 필터 상태: 'all', 'active', 'completed'
+  bool _autoDeleteCompleted = false; // 완료 항목 자동 삭제 옵션 상태
 
-  // 상태값 초기화 (깔끔한 데이터 로드를 위함)
+  // 상태값 초기화
   @override
   void initState() {
     super.initState();
     _loadTodoList(); // 앱 시작 시 로컬 저장소에서 데이터 로드
+    _loadAutoDeleteSetting(); // 앱 시작 시 로컬 저장소에서 완료항목 자동삭제 옵션상태값 로드
   }
 
   // 로컬 저장소에서 데이터를 불러오는 메서드
@@ -53,11 +54,27 @@ class _TodoListScreenState extends State<TodoListScreen> {
     }
   }
 
+  // 로컬 저장소에 완료항목 자동삭제 옵션상태값을 로드하는 메서드
+  Future<void> _loadAutoDeleteSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(
+      () {
+        _autoDeleteCompleted = prefs.getBool('autoDeleteCompleted') ?? false;
+      },
+    );
+  }
+
   // 로컬 저장소에 데이터를 저장하는 메서드
   Future<void> _saveTodoList() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = jsonEncode(_todoList); // JSON 문자열로 변환
     await prefs.setString('todoList', jsonString); // JSON 데이터 저장
+  }
+
+  // 로컬 저장소에 완료항목 자동삭제 옵션상태값을 저장하는 메서드
+  Future<void> _saveAutoDeleteSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('autoDeleteCompleted', _autoDeleteCompleted);
   }
 
   // 할 일 추가 메서드
@@ -73,10 +90,10 @@ class _TodoListScreenState extends State<TodoListScreen> {
   // 할 일 삭제 메서드
   void _deleteTodoItem(int index) {
     print(_todoList[index]);
+    print("할 일을 삭제합니다 !");
     setState(() {
       _todoList.removeAt(index);
     });
-    print("할 일을 삭제했어요 !");
     _saveTodoList();
   }
 
@@ -92,6 +109,11 @@ class _TodoListScreenState extends State<TodoListScreen> {
   void _toggleTodoStatus(int index) {
     setState(() {
       _todoList[index]['isCompleted'] = !_todoList[index]['isCompleted'];
+      if (_autoDeleteCompleted && _todoList[index]['isCompleted']) {
+        print(_todoList[index]);
+        print("할 일을 삭제합니다 !");
+        _todoList.removeAt(index);
+      }
     });
     _saveTodoList();
   }
@@ -205,6 +227,28 @@ class _TodoListScreenState extends State<TodoListScreen> {
               const PopupMenuItem(value: 'all', child: Text('전체 보기')),
               const PopupMenuItem(value: 'active', child: Text('미완료 보기')),
               const PopupMenuItem(value: 'completed', child: Text('완료 보기')),
+              PopupMenuItem(
+                child: StatefulBuilder(
+                  builder: (BuildContext context, StateSetter setState) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('완료 자동 삭제'),
+                        Switch(
+                          value: _autoDeleteCompleted,
+                          onChanged: (bool value) {
+                            setState(() {
+                              _autoDeleteCompleted = value;
+                            });
+                            _saveAutoDeleteSetting();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ],
