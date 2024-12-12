@@ -223,8 +223,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('To-Do List'),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -272,50 +270,51 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 final todoItem = filteredTodos[index];
                 final actualIndex = _todoList.indexOf(todoItem);
                 return Card(
-                    elevation: 4.0,
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
+                  elevation: 4.0,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(10.0),
+                    title: Text(
+                      todoItem['task'],
+                      style: TextStyle(
+                        decoration: todoItem['isCompleted']
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                        color: todoItem['isCompleted']
+                            ? Colors.grey
+                            : Colors.black,
+                      ),
                     ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(8.0),
-                      title: Text(
-                        todoItem['task'],
-                        style: TextStyle(
-                          decoration: todoItem['isCompleted']
-                              ? TextDecoration.lineThrough
-                              : TextDecoration.none,
-                          color: todoItem['isCompleted']
-                              ? Colors.grey
-                              : Colors.black,
+                    leading: Checkbox(
+                      value: todoItem['isCompleted'],
+                      onChanged: (value) {
+                        _toggleTodoStatus(actualIndex); // 완료 상태 변경
+                      },
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon:
+                              const Icon(Icons.edit, color: Colors.blueAccent),
+                          onPressed: () {
+                            _showEditTodoDialog(context, actualIndex);
+                          },
                         ),
-                      ),
-                      leading: Checkbox(
-                        value: todoItem['isCompleted'],
-                        onChanged: (value) {
-                          _toggleTodoStatus(actualIndex); // 완료 상태 변경
-                        },
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit,
-                                color: Colors.blueAccent),
-                            onPressed: () {
-                              _showEditTodoDialog(context, actualIndex);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete,
-                                color: Colors.redAccent),
-                            onPressed: () {
-                              _deleteTodoItem(actualIndex); // 삭제 버튼 클릭 시 항목 삭제
-                            },
-                          ),
-                        ],
-                      ),
-                    ));
+                        IconButton(
+                          icon:
+                              const Icon(Icons.delete, color: Colors.redAccent),
+                          onPressed: () {
+                            _deleteTodoItem(actualIndex); // 삭제 버튼 클릭 시 항목 삭제
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
               },
             ),
       floatingActionButton: FloatingActionButton(
