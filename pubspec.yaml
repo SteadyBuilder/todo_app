@@ -30,7 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  shared_preferences: ^2.0.16
+  shared_preferences: ^2.3.3
+  table_calendar: ^3.0.6
 
   
 

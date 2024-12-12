@@ -1,5 +1,8 @@
 allprojects {
     repositories {
+        maven {
+            url uri('C:/src/todo_app/local_maven')
+        }
         google()
         mavenCentral()
     }
