@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -216,6 +217,23 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   } // _showEditTodoDialog
 
+  void _showCalendar() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TableCalendar(
+            focusedDay: DateTime.now(),
+            firstDay: DateTime(2000),
+            lastDay: DateTime(2100),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredTodos = _getFilteredTodos();
@@ -223,7 +241,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('To-Do List'),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today), // 캘린더 아이콘
+            onPressed: _showCalendar, // 캘린더 호출
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               setState(() {
