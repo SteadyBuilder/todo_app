@@ -41,6 +41,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
   final List<Map<String, dynamic>> _todoList = []; // 완료/미완료 상태 포함
   String _filter = 'all'; // 필터 상태: 'all', 'active', 'completed'
   bool _autoDeleteCompleted = false; // 완료 항목 자동 삭제 옵션 상태
+  final Map<DateTime, List<String>> _calendarEvents = {}; // 날짜별 이벤트 저장
+  DateTime _focusedDay = DateTime.now(); // 오늘 날짜 기준
+  DateTime? _selectedDay; // 선택된 날짜 저장
 
   // 상태값 초기화
   @override
@@ -87,9 +90,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   // 할 일 추가 메서드
   void _addTodoItem(String task) {
+    final today = DateTime.now();
+    final dateKey = DateTime(today.year, today.month, today.day);
+
     setState(() {
-      _todoList.add({'task': task, 'isCompleted': false}); // 완료 상태 포함
+      _todoList.add({
+        'task': task,
+        'isCompleted': false,
+        'date': today.toIso8601String()
+      }); // 완료 상태 포함
     });
+    _calendarEvents[dateKey] = _calendarEvents[dateKey] ?? [];
+    _calendarEvents[dateKey]!.add(task);
     print(_todoList.last);
     print("할 일을 추가했어요 !");
     _saveTodoList();
@@ -136,6 +148,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return _todoList; // 'all'
   }
 
+  // 날짜별 데이터 조회
+  List<String> _getEventsForDay(DateTime day) {
+    final dateKey = DateTime(day.year, day.month, day.day);
+    return _calendarEvents[dateKey] ?? [];
+  }
+
   // 할 일 추가 다이얼로그 표시
   void _showAddTodoDialog(BuildContext context) {
     String newTask = "";
@@ -177,6 +195,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   } // _showAddTodoDialog
 
+  // 할 일 수정 다이얼로그
   void _showEditTodoDialog(BuildContext context, int index) {
     String editedTask = _todoList[index]['task'];
     TextEditingController controller = TextEditingController(text: editedTask);
@@ -217,19 +236,89 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   } // _showEditTodoDialog
 
+  // 캘린더
   void _showCalendar() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
         return Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TableCalendar(
-            focusedDay: DateTime.now(),
-            firstDay: DateTime(2000),
-            lastDay: DateTime(2100),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              TableCalendar(
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, day, events) {
+                    final eventList = _getEventsForDay(day);
+                    if (eventList.isNotEmpty) {
+                      return Positioned(
+                        bottom: 1,
+                        child: Container(
+                          width: 8.0,
+                          height: 8.0,
+                          decoration: const BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      );
+                    }
+                    return null;
+                  },
+                ),
+                focusedDay: _focusedDay,
+                firstDay: DateTime(2000),
+                lastDay: DateTime(2100),
+                calendarFormat: CalendarFormat.month,
+                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = selectedDay;
+                    _focusedDay = focusedDay;
+                  });
+                  //Navigator.of(context).pop(); // 캘린더 닫기
+                  _showTasksForSelectedDay();
+                },
+              ),
+              const SizedBox(height: 16),
+              // Expanded(
+              //   child: ListView(
+              //     children: _getEventsForDay(_selectedDay ?? _focusedDay)
+              //         .map((event) => ListTile(
+              //               title: Text(event),
+              //             ))
+              //         .toList(),
+              //   ),
+              // ),
+            ],
           ),
         );
+      },
+    );
+  }
+
+  void _showTasksForSelectedDay() {
+    final selectedDateTasks = _getEventsForDay(_selectedDay ?? DateTime.now());
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return selectedDateTasks.isEmpty
+            ? const Center(
+                child: Text(
+                  '항목이 없습니다.',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              )
+            : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ListView(
+                  children: selectedDateTasks
+                      .map((task) => ListTile(
+                            title: Text(task),
+                          ))
+                      .toList(),
+                ),
+              );
       },
     );
   }
