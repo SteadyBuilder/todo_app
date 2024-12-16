@@ -44,6 +44,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   final Map<DateTime, List<String>> _calendarEvents = {}; // 날짜별 이벤트 저장
   DateTime _focusedDay = DateTime.now(); // 오늘 날짜 기준
   DateTime? _selectedDay; // 선택된 날짜 저장
+  CalendarFormat _calendarFormat = CalendarFormat.month; // 캘린더 보기 형식
 
   // 상태값 초기화
   @override
@@ -242,57 +243,60 @@ class _TodoListScreenState extends State<TodoListScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TableCalendar(
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, day, events) {
-                    final eventList = _getEventsForDay(day);
-                    if (eventList.isNotEmpty) {
-                      return Positioned(
-                        bottom: 1,
-                        child: Container(
-                          width: 8.0,
-                          height: 8.0,
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
+        return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setModalState) {
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                TableCalendar(
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, events) {
+                      final eventList = _getEventsForDay(day);
+                      if (eventList.isNotEmpty) {
+                        return Positioned(
+                          bottom: 1,
+                          child: Container(
+                            width: 8.0,
+                            height: 8.0,
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+                  focusedDay: _focusedDay,
+                  firstDay: DateTime(2000),
+                  lastDay: DateTime(2100),
+                  calendarFormat: _calendarFormat,
+                  onFormatChanged: (format) {
+                    if (_calendarFormat != format) {
+                      setModalState(() {
+                        _calendarFormat = format;
+                      });
+                      setState(() {
+                        _calendarFormat = format; // 부모 상태에도 저장
+                      });
                     }
-                    return null;
+                  },
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+                    //Navigator.of(context).pop(); // 캘린더 닫기
+                    _showTasksForSelectedDay();
                   },
                 ),
-                focusedDay: _focusedDay,
-                firstDay: DateTime(2000),
-                lastDay: DateTime(2100),
-                calendarFormat: CalendarFormat.month,
-                selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
-                  //Navigator.of(context).pop(); // 캘린더 닫기
-                  _showTasksForSelectedDay();
-                },
-              ),
-              const SizedBox(height: 16),
-              // Expanded(
-              //   child: ListView(
-              //     children: _getEventsForDay(_selectedDay ?? _focusedDay)
-              //         .map((event) => ListTile(
-              //               title: Text(event),
-              //             ))
-              //         .toList(),
-              //   ),
-              // ),
-            ],
-          ),
-        );
+              ],
+            ),
+          );
+        });
       },
     );
   }
