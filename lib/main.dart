@@ -92,19 +92,20 @@ class _TodoListScreenState extends State<TodoListScreen> {
   // 할 일 추가 메서드
   void _addTodoItem(String task) {
     final today = DateTime.now();
-    final dateKey = DateTime(today.year, today.month, today.day);
+    final dateKey = _normalizeDate(today); // 날짜 키 표준화 호출로 변경
 
     setState(() {
       _todoList.add({
         'task': task,
         'isCompleted': false,
         'date': today.toIso8601String()
-      }); // 완료 상태 포함
+      });
     });
     _calendarEvents[dateKey] = _calendarEvents[dateKey] ?? [];
     _calendarEvents[dateKey]!.add(task);
     print(_todoList.last);
     print("할 일을 추가했어요 !");
+    print("캘린더 이벤트: $_calendarEvents"); // 날짜 키 표준화 로그 (확인 후 제거)
     _saveTodoList();
   }
 
@@ -151,8 +152,13 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   // 날짜별 데이터 조회
   List<String> _getEventsForDay(DateTime day) {
-    final dateKey = DateTime(day.year, day.month, day.day);
+    final dateKey = _normalizeDate(day); // 날짜 키 표준화
     return _calendarEvents[dateKey] ?? [];
+  }
+
+  // 날짜 키 표준화
+  DateTime _normalizeDate(DateTime date) {
+    return DateTime(date.year, date.month, date.day);
   }
 
   // 할 일 추가 다이얼로그 표시
@@ -309,7 +315,6 @@ class _TodoListScreenState extends State<TodoListScreen> {
                       _selectedDay = selectedDay;
                       _focusedDay = focusedDay;
                     });
-                    //Navigator.of(context).pop(); // 캘린더 닫기
                     _showTasksForSelectedDay();
                   },
                 ),
