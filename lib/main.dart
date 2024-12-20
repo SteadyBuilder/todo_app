@@ -248,7 +248,27 @@ class _TodoListScreenState extends State<TodoListScreen> {
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      '캘린더',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        Navigator.of(context).pop(); // 캘린더 모달 닫기
+                      },
+                    ),
+                  ],
+                ),
+                const Divider(),
                 TableCalendar(
                   calendarBuilders: CalendarBuilders(
                     markerBuilder: (context, day, events) {
