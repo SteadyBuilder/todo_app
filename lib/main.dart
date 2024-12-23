@@ -52,6 +52,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     super.initState();
     _loadTodoList(); // 앱 시작 시 로컬 저장소에서 데이터 로드
     _loadAutoDeleteSetting(); // 앱 시작 시 로컬 저장소에서 완료항목 자동삭제 옵션상태값 로드
+    _loadCalendarEvents(); // 앱 시작 시 로컬 저장소에서 캘린더 이벤트 로드
   }
 
   // 로컬 저장소에서 데이터를 불러오는 메서드
@@ -59,14 +60,23 @@ class _TodoListScreenState extends State<TodoListScreen> {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString('todoList');
     if (jsonString != null) {
+      final List<dynamic> jsonData = jsonDecode(jsonString);
       setState(() {
-        final List<dynamic> jsonData = jsonDecode(jsonString);
+        _todoList.clear(); // 중복 방지, 메모리에 남은 데이터 초기화
         _todoList.addAll(jsonData.cast<Map<String, dynamic>>());
+
+        // _calendarEvents와 동기화
+        _calendarEvents.clear();
+        for (var item in _todoList) {
+          final dateKey = _normalizeDate(DateTime.parse(item['date']));
+          _calendarEvents[dateKey] = _calendarEvents[dateKey] ?? [];
+          _calendarEvents[dateKey]!.add(item['task']);
+        }
       });
     }
   }
 
-  // 로컬 저장소에 완료항목 자동삭제 옵션상태값을 로드하는 메서드
+  // 로컬 저장소에서 완료항목 자동삭제 옵션상태값을 로드하는 메서드
   Future<void> _loadAutoDeleteSetting() async {
     final prefs = await SharedPreferences.getInstance();
     setState(
@@ -74,6 +84,21 @@ class _TodoListScreenState extends State<TodoListScreen> {
         _autoDeleteCompleted = prefs.getBool('autoDeleteCompleted') ?? false;
       },
     );
+  }
+
+  // 로컬 저장소에서 날짜별 조회용 할일 데이터를 로드하는 메서드
+  Future<void> _loadCalendarEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonString = prefs.getString('calendarEvents');
+    if (jsonString != null) {
+      final Map<String, dynamic> jsonEvents = jsonDecode(jsonString);
+      setState(() {
+        _calendarEvents.clear();
+        jsonEvents.forEach((key, value) {
+          _calendarEvents[DateTime.parse(key)] = List<String>.from(value);
+        });
+      });
+    }
   }
 
   // 로컬 저장소에 데이터를 저장하는 메서드
@@ -87,6 +112,14 @@ class _TodoListScreenState extends State<TodoListScreen> {
   Future<void> _saveAutoDeleteSetting() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('autoDeleteCompleted', _autoDeleteCompleted);
+  }
+
+  // 로컬 저장소에 날짜별 조회용 할일 데이터를 저장하는 메서드
+  Future<void> _saveCalendarEvents() async {
+    final prefs = await SharedPreferences.getInstance();
+    final jsonEvents = _calendarEvents
+        .map((key, value) => MapEntry(key.toIso8601String(), value));
+    await prefs.setString('calendarEvents', jsonEncode(jsonEvents));
   }
 
   // 할 일 추가 메서드
@@ -106,17 +139,28 @@ class _TodoListScreenState extends State<TodoListScreen> {
     print(_todoList.last);
     print("할 일을 추가했어요 !");
     print("캘린더 이벤트: $_calendarEvents"); // 날짜 키 표준화 로그 (확인 후 제거)
+
     _saveTodoList();
+    _saveCalendarEvents(); // 캘린더 이벤트 저장
   }
 
   // 할 일 삭제 메서드
   void _deleteTodoItem(int index) {
     print(_todoList[index]);
     print("할 일을 삭제합니다 !");
+    final todoItem = _todoList[index];
+    final dateKey = _normalizeDate(DateTime.parse(todoItem['date']));
+
     setState(() {
       _todoList.removeAt(index);
+      _calendarEvents[dateKey]?.remove(todoItem['task']);
+      if (_calendarEvents[dateKey]?.isEmpty ?? true) {
+        _calendarEvents.remove(dateKey);
+      }
     });
+
     _saveTodoList();
+    _saveCalendarEvents(); // 캘린더 이벤트 저장
   }
 
   // 할 일 수정 메서드
@@ -330,6 +374,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     final selectedDateTasks = _getEventsForDay(_selectedDay ?? DateTime.now());
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
         return selectedDateTasks.isEmpty
             ? const Center(
