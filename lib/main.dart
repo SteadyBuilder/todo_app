@@ -124,22 +124,28 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   // 할 일 추가 메서드
   void _addTodoItem(String task) {
-    final today = DateTime.now();
-    final dateKey = _normalizeDate(today); // 날짜 키 표준화 호출로 변경
+    final today = DateTime.now(); // 현재 날짜
+    final dateKey = _normalizeDate(_selectedDay ?? today); // 선택된 날짜 또는 현재 날짜
 
     setState(() {
+      // 새로운 할 일을 _todoList에 추가
       _todoList.add({
         'task': task,
         'isCompleted': false,
-        'date': today.toIso8601String()
+        'date': dateKey.toIso8601String(), // 선택된 날짜 사용
       });
+
+      // 캘린더 이벤트 업데이트
+      _calendarEvents[dateKey] = _calendarEvents[dateKey] ?? [];
+      _calendarEvents[dateKey]!.add(task);
     });
-    _calendarEvents[dateKey] = _calendarEvents[dateKey] ?? [];
-    _calendarEvents[dateKey]!.add(task);
+
+    // 콘솔 출력 (디버깅용)
     print(_todoList.last);
     print("할 일을 추가했어요 !");
     print("캘린더 이벤트: $_calendarEvents"); // 날짜 키 표준화 로그 (확인 후 제거)
 
+    // 데이터 저장
     _saveTodoList();
     _saveCalendarEvents(); // 캘린더 이벤트 저장
   }
@@ -186,12 +192,36 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   // 현재 필터에 따라 리스트 필터링
   List<Map<String, dynamic>> _getFilteredTodos() {
-    if (_filter == 'active') {
-      return _todoList.where((item) => !item['isCompleted']).toList();
-    } else if (_filter == 'completed') {
-      return _todoList.where((item) => item['isCompleted']).toList();
+    final today = _normalizeDate(DateTime.now()); // 오늘 날짜를 표준화
+    print("_filter : $_filter");
+    print('_todoList: $_todoList');
+    print('_calendarEvents: $_calendarEvents');
+
+    // 'all' 필터인 경우 오늘 날짜의 할 일만 필터링
+    if (_filter == 'all') {
+      return _todoList.where((item) {
+        final itemDate = _normalizeDate(DateTime.parse(item['date']));
+        return itemDate == today; // 오늘 날짜와 동일한 할 일만 반환
+      }).toList();
     }
-    return _todoList; // 'all'
+
+    // 'active' ㅣㄹ터인 경우 미완료된 오늘 날짜의 할 일만 필터링
+    if (_filter == 'active') {
+      return _todoList.where((item) {
+        final itemDate = _normalizeDate(DateTime.parse(item['date']));
+        return itemDate == today && !item['isCompleted'];
+      }).toList();
+    }
+
+    // 'completed' 필터인 경우 완료된 오늘 날짜의 할 일만 필터링
+    if (_filter == 'completed') {
+      return _todoList.where((item) {
+        final itemDate = _normalizeDate(DateTime.parse(item['date']));
+        return itemDate == today && item['isCompleted'];
+      }).toList();
+    }
+
+    return []; // 기본적으로 빈 리스트 반환
   }
 
   // 날짜별 데이터 조회
@@ -213,7 +243,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("할 일 추가"),
+          title: const Text("새로운 할 일 추가"),
           content: TextField(
             decoration: const InputDecoration(
               hintText: "할 일을 입력하세요",
@@ -230,13 +260,17 @@ class _TodoListScreenState extends State<TodoListScreen> {
               },
               child: const Text("취소"),
             ),
+            // 추가 버튼
             TextButton(
               onPressed: () {
                 if (newTask.isNotEmpty) {
                   // 할 일 리스트 추가하기
                   _addTodoItem(newTask);
+
+                  // 다이얼로그 닫기 후 목록 갱신
+                  Navigator.of(context).pop(); // 다이얼로그 닫기
+                  _showTasksForSelectedDay();
                 }
-                Navigator.of(context).pop(); // 다이얼로그 닫기
               },
               child: const Text("추가"),
             ),
@@ -372,6 +406,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   void _showTasksForSelectedDay() {
     final selectedDateTasks = _getEventsForDay(_selectedDay ?? DateTime.now());
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -381,6 +416,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // 상단: 제목과 닫기 버튼
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -398,6 +434,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 ],
               ),
               const Divider(),
+
+              // 중간: 할 일 목록
               selectedDateTasks.isEmpty
                   ? const Center(
                       child: Text(
@@ -454,6 +492,17 @@ class _TodoListScreenState extends State<TodoListScreen> {
                         },
                       ),
                     ),
+
+              // 하단: "할 일 추가" 버튼
+              Padding(
+                padding: const EdgeInsets.only(top: 16.0),
+                child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('할 일 추가'),
+                    onPressed: () {
+                      _showAddTodoDialog(context);
+                    }),
+              ),
             ],
           ),
         );
