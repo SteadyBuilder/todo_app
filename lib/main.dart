@@ -376,23 +376,87 @@ class _TodoListScreenState extends State<TodoListScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return selectedDateTasks.isEmpty
-            ? const Center(
-                child: Text(
-                  '항목이 없습니다.',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              )
-            : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ListView(
-                  children: selectedDateTasks
-                      .map((task) => ListTile(
-                            title: Text(task),
-                          ))
-                      .toList(),
-                ),
-              );
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${_selectedDay != null ? _selectedDay!.toLocal().toString().split(' ')[0] : '오늘'} 일자의 할 일',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const Divider(),
+              selectedDateTasks.isEmpty
+                  ? const Center(
+                      child: Text(
+                        '할 일이 없습니다!',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  : Expanded(
+                      child: ListView.builder(
+                        itemCount: selectedDateTasks.length,
+                        itemBuilder: (context, index) {
+                          final task = selectedDateTasks[index];
+                          return Card(
+                            elevation: 4.0,
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: ListTile(
+                              title: Text(
+                                task,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.blueAccent),
+                                    onPressed: () {
+                                      // 편집 기능 추가
+                                      _showEditTodoDialog(
+                                          context,
+                                          _todoList.indexWhere(
+                                              (item) => item['task'] == task));
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.redAccent),
+                                    onPressed: () {
+                                      setState(
+                                        () {
+                                          _deleteTodoItem(_todoList.indexWhere(
+                                              (item) => item['task'] == task));
+                                        },
+                                      );
+                                      Navigator.of(context).pop();
+                                      _showTasksForSelectedDay(); // 목록 갱신
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+            ],
+          ),
+        );
       },
     );
   }
