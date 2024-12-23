@@ -407,105 +407,132 @@ class _TodoListScreenState extends State<TodoListScreen> {
   void _showTasksForSelectedDay() {
     final selectedDateTasks = _getEventsForDay(_selectedDay ?? DateTime.now());
 
+    // 기존 모달 닫기 후 새로운 모달 열기
+    Navigator.of(context).pop(); // 기존 모달 닫기
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 상단: 제목과 닫기 버튼
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${_selectedDay != null ? _selectedDay!.toLocal().toString().split(' ')[0] : '오늘'} 일자의 할 일',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const Divider(),
-
-              // 중간: 할 일 목록
-              selectedDateTasks.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '할 일이 없습니다!',
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    )
-                  : Expanded(
-                      child: ListView.builder(
-                        itemCount: selectedDateTasks.length,
-                        itemBuilder: (context, index) {
-                          final task = selectedDateTasks[index];
-                          return Card(
-                            elevation: 4.0,
-                            margin: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: ListTile(
-                              title: Text(
-                                task,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit,
-                                        color: Colors.blueAccent),
-                                    onPressed: () {
-                                      // 편집 기능 추가
-                                      _showEditTodoDialog(
-                                          context,
-                                          _todoList.indexWhere(
-                                              (item) => item['task'] == task));
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.redAccent),
-                                    onPressed: () {
-                                      setState(
-                                        () {
-                                          _deleteTodoItem(_todoList.indexWhere(
-                                              (item) => item['task'] == task));
-                                        },
-                                      );
-                                      Navigator.of(context).pop();
-                                      _showTasksForSelectedDay(); // 목록 갱신
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
+        return StatefulBuilder(
+            builder: (BuildContext context, StateSetter setModalState) {
+          return Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 상단: 제목과 닫기 버튼
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${_selectedDay != null ? _selectedDay!.toLocal().toString().split(' ')[0] : '오늘'} 일자의 할 일',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const Divider(),
 
-              // 하단: "할 일 추가" 버튼
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0),
-                child: ElevatedButton.icon(
-                    icon: const Icon(Icons.add),
-                    label: const Text('할 일 추가'),
-                    onPressed: () {
-                      _showAddTodoDialog(context);
-                    }),
-              ),
-            ],
-          ),
-        );
+                // 중간: 할 일 목록
+                selectedDateTasks.isEmpty
+                    ? const Center(
+                        child: Text(
+                          '할 일이 없습니다!',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      )
+                    : Expanded(
+                        child: ListView.builder(
+                          itemCount: selectedDateTasks.length,
+                          itemBuilder: (context, index) {
+                            final task = selectedDateTasks[index];
+                            return Card(
+                              elevation: 4.0,
+                              margin: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: ListTile(
+                                title: Text(
+                                  task,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit,
+                                          color: Colors.blueAccent),
+                                      onPressed: () {
+                                        // 편집 기능 추가
+                                        _showEditTodoDialog(
+                                            context,
+                                            _todoList.indexWhere((item) =>
+                                                item['task'] == task));
+                                      },
+                                    ),
+                                    IconButton(
+                                        icon: const Icon(Icons.delete,
+                                            color: Colors.redAccent),
+                                        onPressed: () {
+                                          final taskToDelete = task; // 삭제할 항목
+                                          final dateKey = _normalizeDate(
+                                              _selectedDay ??
+                                                  DateTime.now()); // 선택된 날짜키
+
+                                          setState(() {
+                                            // _todoList에서 삭제
+                                            _todoList.removeWhere((item) =>
+                                                item['task'] == taskToDelete &&
+                                                _normalizeDate(DateTime.parse(
+                                                        item['date'])) ==
+                                                    dateKey);
+
+                                            // _calendarEvents 에서 해당 항목 삭제
+                                            _calendarEvents[dateKey]
+                                                ?.remove(taskToDelete);
+
+                                            // 만약 해당 날짜의 이벤트 리스트가 비었다면, 날짜 키 제거
+                                            if (_calendarEvents[dateKey]
+                                                    ?.isEmpty ??
+                                                true) {
+                                              _calendarEvents.remove(dateKey);
+                                            }
+                                          });
+
+                                          // 모달 내부 상태 갱신
+                                          setModalState(() {
+                                            selectedDateTasks.remove(
+                                                taskToDelete); // 선택된 날짜의 목록 갱신
+                                          });
+                                        }),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                // 하단: "할 일 추가" 버튼
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('할 일 추가'),
+                      onPressed: () {
+                        _showAddTodoDialog(context);
+                      }),
+                ),
+              ],
+            ),
+          );
+        });
       },
     );
   }
