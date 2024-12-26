@@ -434,7 +434,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        // 모달 닫기
+                        if (Navigator.canPop(context)) {
+                          Navigator.of(context).pop();
+                        }
+                      },
                     ),
                   ],
                 ),
