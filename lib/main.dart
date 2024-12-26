@@ -337,6 +337,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _focusedDay = DateTime.now();
+                          _selectedDay = DateTime.now();
+                        });
+                      },
+                      child: const Text(
+                        '오늘',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                     const Text(
                       '캘린더',
                       style: TextStyle(
