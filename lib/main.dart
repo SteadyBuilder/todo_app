@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(const MyApp());
@@ -39,9 +40,11 @@ class TodoListScreen extends StatefulWidget {
 
 class _TodoListScreenState extends State<TodoListScreen> {
   final List<Map<String, dynamic>> _todoList = []; // 완료/미완료 상태 포함
+  final Map<DateTime, List<String>> _calendarEvents = {}; // 날짜별 이벤트 저장
+  final AudioPlayer _audioPlayer = AudioPlayer(); // 오디오 플레이어
+
   String _filter = 'all'; // 필터 상태: 'all', 'active', 'completed'
   bool _autoDeleteCompleted = false; // 완료 항목 자동 삭제 옵션 상태
-  final Map<DateTime, List<String>> _calendarEvents = {}; // 날짜별 이벤트 저장
   DateTime _focusedDay = DateTime.now(); // 오늘 날짜 기준
   DateTime? _selectedDay; // 선택된 날짜 저장
   CalendarFormat _calendarFormat = CalendarFormat.month; // 캘린더 보기 형식
@@ -142,7 +145,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
     // 콘솔 출력 (디버깅용)
     print(_todoList.last);
     print("할 일을 추가했어요 !");
-    print("캘린더 이벤트: $_calendarEvents"); // 날짜 키 표준화 로그 (확인 후 제거)
+
+    // 할 일 추가 효과음 재생
+    _playSound('sounds/task_add.mp3');
 
     // 데이터 저장
     _saveTodoList();
@@ -164,6 +169,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
       }
     });
 
+    _playSound('task_delete.mp3');
     _saveTodoList();
     _saveCalendarEvents(); // 캘린더 이벤트 저장
   }
@@ -180,13 +186,30 @@ class _TodoListScreenState extends State<TodoListScreen> {
   void _toggleTodoStatus(int index) {
     setState(() {
       _todoList[index]['isCompleted'] = !_todoList[index]['isCompleted'];
-      if (_autoDeleteCompleted && _todoList[index]['isCompleted']) {
-        print(_todoList[index]);
-        print("할 일을 삭제합니다 !");
-        _todoList.removeAt(index);
-      }
     });
-    _saveTodoList();
+
+    if (_autoDeleteCompleted && _todoList[index]['isCompleted']) {
+      Future.delayed(const Duration(seconds: 3), () {
+        // 항목이 여전히 완료 상태인 경우 삭제
+        if (_todoList[index]['isCompleted']) {
+          setState(() {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text("완료 항목 '${_todoList[index]['task']}' 항목이 삭제되었습니다."),
+              ),
+            );
+            _playSound('sounds/task_delete.mp3');
+            print(_todoList[index]);
+            print("할 일을 삭제합니다 !");
+            _todoList.removeAt(index);
+          });
+          _saveTodoList();
+        }
+      });
+    } else {
+      _saveTodoList();
+    }
   }
 
   // 현재 필터에 따라 리스트 필터링
@@ -234,6 +257,22 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return DateTime(date.year, date.month, date.day);
   }
 
+  // 효과음 재생 메서드
+  Future<void> _playSound(String soundPath) async {
+    try {
+      await _audioPlayer.play(AssetSource(soundPath));
+    } catch (e) {
+      print("오디오 재생 오류: $e");
+    }
+  }
+
+  // 오디오 플레이어 메모리 해제 메서드
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
   // 할 일 추가 다이얼로그 표시
   void _showAddTodoDialog(BuildContext context,
       {required DateTime date, VoidCallback? onTaskAdded}) {
@@ -256,6 +295,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
             // 취소 버튼
             TextButton(
               onPressed: () {
+                _playSound('sounds/modal_close.mp3');
                 Navigator.of(context).pop(); // 다이얼로그 닫기
               },
               child: const Text("취소"),
@@ -264,6 +304,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
             TextButton(
               onPressed: () {
                 if (newTask.isNotEmpty) {
+                  _playSound('sounds/task_add.mp3');
                   // 할 일 리스트 추가하기
                   _addTodoItem(newTask, date: date); // 선택한 날짜로 추가
                   Navigator.of(context).pop(); // 다이얼로그 닫기
@@ -302,6 +343,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           actions: [
             TextButton(
               onPressed: () {
+                _playSound('sounds/modal_close.mp3');
                 Navigator.of(context).pop();
               },
               child: const Text("취소"),
@@ -309,6 +351,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
             TextButton(
               onPressed: () {
                 if (editedTask.isNotEmpty) {
+                  _playSound('sounds/task_add.mp3');
                   _editTodoItem(index, editedTask);
                 }
                 Navigator.of(context).pop();
@@ -323,6 +366,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   // 캘린더
   void _showCalendar() {
+    _playSound('sounds/modal_open.mp3');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -359,6 +403,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () {
+                        _playSound('sounds/modal_close.mp3');
                         Navigator.of(context).pop(); // 캘린더 모달 닫기
                       },
                     ),
@@ -401,6 +446,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   },
                   selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                   onDaySelected: (selectedDay, focusedDay) {
+                    _playSound('sounds/modal_open.mp3');
                     setState(() {
                       _selectedDay = selectedDay;
                       _focusedDay = focusedDay;
@@ -486,6 +532,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                       icon: const Icon(Icons.edit,
                                           color: Colors.blueAccent),
                                       onPressed: () {
+                                        _playSound('sounds/modal_open.mp3');
                                         // 편집 기능 추가
                                         _showEditTodoDialog(
                                             context,
@@ -497,6 +544,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                         icon: const Icon(Icons.delete,
                                             color: Colors.redAccent),
                                         onPressed: () {
+                                          _playSound('sounds/menu_close.mp3');
                                           final taskToDelete = task; // 삭제할 항목
                                           final dateKey = _normalizeDate(
                                               _selectedDay ??
@@ -574,6 +622,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
+              _playSound('sounds/menu_open.mp3');
               setState(() {
                 _filter = value;
               });
@@ -667,6 +716,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          _playSound('sounds/modal_open.mp3');
           _showAddTodoDialog(context, date: DateTime.now()); // 오늘 날짜로 다이얼로그 호출
         }, // 다이얼로그 호출
         child: const Icon(Icons.add),
