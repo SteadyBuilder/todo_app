@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         textTheme: const TextTheme(
-          bodyLarge: TextStyle(fontSize: 16.0),
+          bodyLarge: TextStyle(fontSize: 18.0),
         ),
         useMaterial3: true,
       ),
@@ -39,6 +39,7 @@ class TodoListScreen extends StatefulWidget {
 
 class _TodoListScreenState extends State<TodoListScreen> {
   final List<Map<String, dynamic>> _todoList = [];
+
   String _filter = 'all';
   bool _autoDeleteCompleted = false;
   DateTime _focusedDay = DateTime.now();
@@ -254,6 +255,24 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   ),
                   const Divider(),
                   TableCalendar(
+                    calendarBuilders: CalendarBuilders(
+                      markerBuilder: (context, day, events) {
+                        final eventList = _getEventsForDay(day);
+                        if (eventList.isNotEmpty) {
+                          return Positioned(
+                            bottom: 1,
+                            child: Container(
+                              width: 8.0,
+                              height: 8.0,
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                     focusedDay: _focusedDay,
                     firstDay: DateTime(2000),
                     lastDay: DateTime(2100),
@@ -288,9 +307,14 @@ class _TodoListScreenState extends State<TodoListScreen> {
                             itemBuilder: (context, index) {
                               final task = tasksForSelectedDay[index];
                               return Card(
+                                elevation: 4.0,
                                 margin:
-                                    const EdgeInsets.symmetric(vertical: 4.0),
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
                                 child: ListTile(
+                                  contentPadding: const EdgeInsets.all(10.0),
                                   title: Text(
                                     task['task'],
                                     style: TextStyle(
@@ -342,6 +366,30 @@ class _TodoListScreenState extends State<TodoListScreen> {
               const PopupMenuItem(value: 'all', child: Text('전체 보기')),
               const PopupMenuItem(value: 'active', child: Text('미완료 보기')),
               const PopupMenuItem(value: 'completed', child: Text('완료 보기')),
+              PopupMenuItem(
+                enabled: false, // 클릭 불가
+                child: StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setState) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "완료 자동 삭제",
+                        style: TextStyle(color: Colors.black),
+                      ),
+                      Switch(
+                        value: _autoDeleteCompleted,
+                        onChanged: (value) {
+                          setState(() {
+                            _autoDeleteCompleted = value;
+                          });
+                          _saveAutoDeleteSetting();
+                        },
+                      ),
+                    ],
+                  );
+                }),
+              ),
             ],
           ),
         ],
@@ -353,32 +401,40 @@ class _TodoListScreenState extends State<TodoListScreen> {
               itemBuilder: (context, index) {
                 final todoItem = filteredTodos[index];
                 final actualIndex = _todoList.indexOf(todoItem);
-                return ListTile(
-                  title: Text(
-                    todoItem['task'],
-                    style: TextStyle(
-                      decoration: todoItem['isCompleted']
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
+                return Card(
+                  elevation: 4.0,
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16.0),
+                    title: Text(
+                      todoItem['task'],
+                      style: TextStyle(
+                        decoration: todoItem['isCompleted']
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                      ),
                     ),
-                  ),
-                  leading: Checkbox(
-                    value: todoItem['isCompleted'],
-                    onChanged: (value) => _toggleTodoStatus(actualIndex),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () =>
-                            _showEditTodoDialog(context, actualIndex),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () => _deleteTodoItem(actualIndex),
-                      ),
-                    ],
+                    leading: Checkbox(
+                      value: todoItem['isCompleted'],
+                      onChanged: (value) => _toggleTodoStatus(actualIndex),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () =>
+                              _showEditTodoDialog(context, actualIndex),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _deleteTodoItem(actualIndex),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
