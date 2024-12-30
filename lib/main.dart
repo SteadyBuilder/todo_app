@@ -355,7 +355,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('To-Do List'),
-        backgroundColor: Colors.yellow.shade100,
+        backgroundColor: Colors.yellow.shade600,
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today),
