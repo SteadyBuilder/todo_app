@@ -355,6 +355,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('To-Do List'),
+        backgroundColor: Colors.yellow.shade100,
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today),
@@ -394,54 +395,83 @@ class _TodoListScreenState extends State<TodoListScreen> {
           ),
         ],
       ),
-      body: filteredTodos.isEmpty
-          ? const Center(child: Text('항목이 없습니다!'))
-          : ListView.builder(
-              itemCount: filteredTodos.length,
-              itemBuilder: (context, index) {
-                final todoItem = filteredTodos[index];
-                final actualIndex = _todoList.indexOf(todoItem);
-                return Card(
-                  elevation: 4.0,
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16.0),
-                    title: Text(
-                      todoItem['task'],
-                      style: TextStyle(
-                        decoration: todoItem['isCompleted']
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                      ),
-                    ),
-                    leading: Checkbox(
-                      value: todoItem['isCompleted'],
-                      onChanged: (value) => _toggleTodoStatus(actualIndex),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () =>
-                              _showEditTodoDialog(context, actualIndex),
+      body: Column(
+        children: [
+          Expanded(
+            child: filteredTodos.isEmpty
+                ? const Center(child: Text('항목이 없습니다!'))
+                : ListView.builder(
+                    itemCount: filteredTodos.length,
+                    itemBuilder: (context, index) {
+                      final todoItem = filteredTodos[index];
+                      final actualIndex = _todoList.indexOf(todoItem);
+                      return Card(
+                        elevation: 4.0,
+                        margin: const EdgeInsets.symmetric(vertical: 8.0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteTodoItem(actualIndex),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16.0),
+                          title: Text(
+                            todoItem['task'],
+                            style: TextStyle(
+                              decoration: todoItem['isCompleted']
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                          ),
+                          leading: Checkbox(
+                            value: todoItem['isCompleted'],
+                            onChanged: (value) =>
+                                _toggleTodoStatus(actualIndex),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                color: Colors.blue.shade300,
+                                onPressed: () =>
+                                    _showEditTodoDialog(context, actualIndex),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                color: Colors.red.shade300,
+                                onPressed: () => _deleteTodoItem(actualIndex),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: () =>
+                  _showAddTodoDialog(context, date: DateTime.now()),
+              style: ElevatedButton.styleFrom(
+                elevation: 8.0,
+                backgroundColor: Colors.yellow.shade600,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 16.0, horizontal: 32.0),
+              ),
+              child: const Text(
+                '+ 할 일 추가',
+                style: TextStyle(
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTodoDialog(context, date: DateTime.now()),
-        child: const Icon(Icons.add),
+          ),
+        ],
       ),
     );
   }
