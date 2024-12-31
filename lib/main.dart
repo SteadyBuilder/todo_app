@@ -230,6 +230,43 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
+  void _showAddTodoDialogInModal(
+      BuildContext context, DateTime date, StateSetter setModalState) {
+    String newTask = "";
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("새로운 할 일 추가"),
+          content: TextField(
+            decoration: const InputDecoration(hintText: "할 일을 입력하세요"),
+            onChanged: (value) => newTask = value,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("취소"),
+            ),
+            TextButton(
+              onPressed: () {
+                if (newTask.isNotEmpty) {
+                  setState(() {
+                    _addTodoItem(newTask, date: date);
+                  });
+
+                  setModalState(() {}); // 모달 상태 업데이트
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text("추가"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showCalendar() {
     showModalBottomSheet(
       context: context,
@@ -418,6 +455,23 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                 },
                               );
                       },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _showAddTodoDialogInModal(
+                            context, selectedDay, setModalState);
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('할 일 추가'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.yellow.shade600,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                      ),
                     ),
                   ),
                 ],
