@@ -38,19 +38,19 @@ class TodoListScreen extends StatefulWidget {
 }
 
 class _TodoListScreenState extends State<TodoListScreen> {
-  final List<Map<String, dynamic>> _todoList = [];
+  final List<Map<String, dynamic>> _todoList = []; // 할 일 리스트
 
-  String _filter = 'all';
-  bool _autoDeleteCompleted = false;
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  String _filter = 'all'; // 필터 구분 값 (all, active, completed)
+  bool _autoDeleteCompleted = false; // 자동 삭제 옵션 활성화 구분
+  DateTime _focusedDay = DateTime.now(); // 캘린더 오늘 날짜
+  DateTime? _selectedDay; // 캘린더 선택된 날짜
+  CalendarFormat _calendarFormat = CalendarFormat.month; // 캘린더 보기 구분
 
   @override
   void initState() {
     super.initState();
-    _loadTodoList();
-    _loadAutoDeleteSetting();
+    _loadTodoList(); // 저장된 할 일 목록 리스트 로드
+    _loadAutoDeleteSetting(); // 저장된 자동 삭제 옵션 구분값 로드
   }
 
   Future<void> _loadTodoList() async {
@@ -143,6 +143,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   DateTime _normalizeDate(DateTime date) {
     return DateTime(date.year, date.month, date.day);
+  }
+
+  String _formatKoreanTimeOfDay(TimeOfDay time) {
+    final period = time.period == DayPeriod.am ? '오전' : '오후';
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    return '$period $hour:${time.minute.toString().padLeft(2, '0')}';
   }
 
   void _showAddTodoDialog(BuildContext context, {required DateTime date}) {
@@ -354,7 +360,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('To-Do List'),
+        title: StreamBuilder<DateTime>(
+          stream: Stream.periodic(
+              const Duration(seconds: 1), (_) => DateTime.now()),
+          builder: (context, snapshot) {
+            final now = snapshot.data ?? DateTime.now();
+            return Text(
+              '${now.toLocal().toString().split(' ')[0]} – ${_formatKoreanTimeOfDay(TimeOfDay.fromDateTime(now))}',
+              style:
+                  const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
+            );
+          },
+        ),
         backgroundColor: Colors.yellow.shade600,
         actions: [
           IconButton(
