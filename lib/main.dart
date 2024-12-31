@@ -315,21 +315,13 @@ class _TodoListScreenState extends State<TodoListScreen> {
                               return Card(
                                 elevation: 4.0,
                                 margin:
-                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                    const EdgeInsets.symmetric(vertical: 4.0),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12.0),
                                 ),
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.all(10.0),
-                                  title: Text(
-                                    task['task'],
-                                    style: TextStyle(
-                                      decoration: task['isCompleted']
-                                          ? TextDecoration.lineThrough
-                                          : TextDecoration.none,
-                                    ),
-                                  ),
-                                  trailing: Checkbox(
+                                  leading: Checkbox(
                                     value: task['isCompleted'],
                                     onChanged: (value) {
                                       setState(() {
@@ -339,6 +331,39 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                       });
                                       setModalState(() {});
                                     },
+                                  ),
+                                  title: Text(
+                                    task['task'],
+                                    style: TextStyle(
+                                      decoration: task['isCompleted']
+                                          ? TextDecoration.lineThrough
+                                          : TextDecoration.none,
+                                    ),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit),
+                                        color: Colors.blue.shade300,
+                                        onPressed: () {
+                                          final taskIndex =
+                                              _todoList.indexOf(task);
+                                          _showEditTodoDialog(
+                                              context, taskIndex);
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete),
+                                        color: Colors.red.shade300,
+                                        onPressed: () {
+                                          final taskIndex =
+                                              _todoList.indexOf(task);
+                                          _deleteTodoItem(taskIndex);
+                                          setState(() {});
+                                        },
+                                      )
+                                    ],
                                   ),
                                 ),
                               );
