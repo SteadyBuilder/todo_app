@@ -45,6 +45,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   DateTime _focusedDay = DateTime.now(); // 캘린더 오늘 날짜
   DateTime? _selectedDay; // 캘린더 선택된 날짜
   CalendarFormat _calendarFormat = CalendarFormat.month; // 캘린더 보기 구분
+  final GlobalKey calendarKey = GlobalKey();
 
   @override
   void initState() {
@@ -115,6 +116,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
       });
     });
     _saveTodoList();
+    setState(() {
+      calendarKey.currentState?.setState(() {});
+    });
   }
 
   void _deleteTodoItem(int index) {
@@ -122,6 +126,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
       _todoList.removeAt(index);
     });
     _saveTodoList();
+    _updateTableCalendarEvents();
   }
 
   void _editTodoItem(int index, String newTask) {
@@ -129,6 +134,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
       _todoList[index]['task'] = newTask;
     });
     _saveTodoList();
+    _updateTableCalendarEvents();
   }
 
   void _toggleTodoStatus(int index) {
@@ -139,6 +145,10 @@ class _TodoListScreenState extends State<TodoListScreen> {
       }
     });
     _saveTodoList();
+  }
+
+  void _updateTableCalendarEvents() {
+    setState(() {});
   }
 
   DateTime _normalizeDate(DateTime date) {
@@ -180,12 +190,17 @@ class _TodoListScreenState extends State<TodoListScreen> {
         );
       },
     );
+
+    setState(() {
+      calendarKey.currentState?.setState(() {});
+    });
   }
 
-  void _showEditTodoDialog(BuildContext context, int index) {
+  Future<void> _showEditTodoDialog(BuildContext context, int index) async {
     String editedTask = _todoList[index]['task'];
     TextEditingController controller = TextEditingController(text: editedTask);
-    showDialog(
+
+    return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -261,10 +276,16 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   ),
                   const Divider(),
                   TableCalendar(
+                    key: calendarKey,
                     calendarBuilders: CalendarBuilders(
                       markerBuilder: (context, day, events) {
-                        final eventList = _getEventsForDay(day);
-                        if (eventList.isNotEmpty) {
+                        final hasEvents = _todoList.any((todo) {
+                          final todoDate =
+                              _normalizeDate(DateTime.parse(todo['date']));
+                          return isSameDay(todoDate, day);
+                        });
+
+                        if (hasEvents) {
                           return Positioned(
                             bottom: 1,
                             child: Container(
@@ -277,6 +298,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                             ),
                           );
                         }
+                        return null;
                       },
                     ),
                     focusedDay: _focusedDay,
@@ -298,77 +320,105 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   ),
                   const Divider(),
                   Expanded(
-                    child: tasksForSelectedDay.isEmpty
-                        ? const Center(
-                            child: Text(
-                              '선택한 날짜에 할 일이 없습니다!',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: tasksForSelectedDay.length,
-                            itemBuilder: (context, index) {
-                              final task = tasksForSelectedDay[index];
-                              return Card(
-                                elevation: 4.0,
-                                margin:
-                                    const EdgeInsets.symmetric(vertical: 4.0),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.0),
+                    child: StatefulBuilder(
+                      builder:
+                          (BuildContext context, StateSetter setModalState) {
+                        final tasksForSelectedDay =
+                            _getEventsForDay(selectedDay);
+                        return tasksForSelectedDay.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  '선택한 날짜에 할 일이 없습니다!',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.all(10.0),
-                                  leading: Checkbox(
-                                    value: task['isCompleted'],
-                                    onChanged: (value) {
-                                      setState(() {
-                                        final taskIndex =
-                                            _todoList.indexOf(task);
-                                        _toggleTodoStatus(taskIndex);
-                                      });
-                                      setModalState(() {});
-                                    },
-                                  ),
-                                  title: Text(
-                                    task['task'],
-                                    style: TextStyle(
-                                      decoration: task['isCompleted']
-                                          ? TextDecoration.lineThrough
-                                          : TextDecoration.none,
+                              )
+                            : ListView.builder(
+                                itemCount: tasksForSelectedDay.length,
+                                itemBuilder: (context, index) {
+                                  final task = tasksForSelectedDay[index];
+                                  return Card(
+                                    elevation: 4.0,
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 4.0),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.0),
                                     ),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit),
-                                        color: Colors.blue.shade300,
-                                        onPressed: () {
-                                          final taskIndex =
-                                              _todoList.indexOf(task);
-                                          _showEditTodoDialog(
-                                              context, taskIndex);
+                                    child: ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.all(10.0),
+                                      leading: Checkbox(
+                                        value: task['isCompleted'],
+                                        onChanged: (value) {
+                                          setState(() {
+                                            final taskIndex =
+                                                _todoList.indexOf(task);
+                                            _toggleTodoStatus(taskIndex);
+                                          });
+                                          setModalState(() {});
                                         },
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete),
-                                        color: Colors.red.shade300,
-                                        onPressed: () {
-                                          final taskIndex =
-                                              _todoList.indexOf(task);
-                                          _deleteTodoItem(taskIndex);
-                                          setState(() {});
-                                        },
-                                      )
-                                    ],
-                                  ),
-                                ),
+                                      title: Text(
+                                        task['task'],
+                                        style: TextStyle(
+                                          decoration: task['isCompleted']
+                                              ? TextDecoration.lineThrough
+                                              : TextDecoration.none,
+                                        ),
+                                      ),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          // 캘린더 날짜별 할 일 목록 편집버튼
+                                          IconButton(
+                                            icon: const Icon(Icons.edit),
+                                            color: Colors.blue.shade300,
+                                            onPressed: () async {
+                                              final taskIndex =
+                                                  _todoList.indexOf(task);
+                                              await _showEditTodoDialog(
+                                                  context, taskIndex);
+                                              setModalState(
+                                                () {
+                                                  tasksForSelectedDay[index]
+                                                          ['task'] =
+                                                      _todoList[taskIndex]
+                                                          ['task'];
+                                                },
+                                              );
+                                            },
+                                          ),
+                                          // 캘린더 날짜별 할 일 목록 삭제버튼
+                                          IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            color: Colors.red.shade300,
+                                            onPressed: () {
+                                              final taskIndex =
+                                                  _todoList.indexOf(task);
+                                              _deleteTodoItem(taskIndex);
+
+                                              setModalState(() {
+                                                tasksForSelectedDay
+                                                    .removeAt(index);
+                                              });
+
+                                              // 이벤트 상태 업데이트
+                                              setState(() {
+                                                calendarKey.currentState
+                                                    ?.setState(() {});
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
-                            },
-                          ),
+                      },
+                    ),
                   ),
                 ],
               ),
